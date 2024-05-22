@@ -82,7 +82,7 @@ async function run() {
     app.get("/rooms", async (req, res) => {
       const category = req.query.category;
       let query = {};
-      if (category && category!=='null') query = { category: category };
+      if (category && category !== "null") query = { category: category };
       const result = await roomsCollection.find(query).toArray();
       res.send(result);
     });
@@ -95,11 +95,27 @@ async function run() {
     });
 
     //save a room data in db
-    app.post('/room',async(req,res)=>{
-      const roomData=req.body
-      const result=await roomsCollection.insertOne(roomData)
-      res.send(result)
-    })
+    app.post("/room", async (req, res) => {
+      const roomData = req.body;
+      const result = await roomsCollection.insertOne(roomData);
+      res.send(result);
+    });
+    
+
+    app.get("/my-listings/:email", async (req, res) => {
+      const email = req.params.email;
+      let query = { "host.email": email };
+      const result = await roomsCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    //delete a room
+    app.delete("/room/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await roomsCollection.deleteOne(query);
+      res.send(result);
+    });
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
