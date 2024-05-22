@@ -48,6 +48,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     const roomsCollection = client.db("stayVista").collection("rooms");
+    const usersCollection = client.db("stayVista").collection("users");
     // auth related api
     app.post("/jwt", async (req, res) => {
       const user = req.body;
@@ -86,6 +87,20 @@ async function run() {
       const result = await roomsCollection.find(query).toArray();
       res.send(result);
     });
+    //save user data in db
+    app.put("/user", async (req, res) => {
+      const user = req.body;
+      const options = { upsert: true };
+      const query = { email: user?.email };
+      const updateDoc = {
+        $set: {
+          ...user,
+          timeStamp:Date.now()
+        },
+      };
+      const result = usersCollection.updateOne(query, updateDoc, options);
+      res.send(result);
+    });
     //get single room data from using id
     app.get("/rooms/:id", async (req, res) => {
       const id = req.params.id;
@@ -100,7 +115,6 @@ async function run() {
       const result = await roomsCollection.insertOne(roomData);
       res.send(result);
     });
-    
 
     app.get("/my-listings/:email", async (req, res) => {
       const email = req.params.email;
