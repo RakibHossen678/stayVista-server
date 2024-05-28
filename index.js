@@ -3,7 +3,12 @@ const app = express();
 require("dotenv").config();
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
-const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const {
+  MongoClient,
+  ServerApiVersion,
+  ObjectId,
+  Timestamp,
+} = require("mongodb");
 const jwt = require("jsonwebtoken");
 
 const port = process.env.PORT || 8000;
@@ -90,17 +95,63 @@ async function run() {
     //save user data in db
     app.put("/user", async (req, res) => {
       const user = req.body;
-      const options = { upsert: true };
       const query = { email: user?.email };
+      //check if user already exists in db
+      const isExists = await usersCollection.findOne({ email: user?.email });
+      if (isExists) {
+        if (user.status === "Requested") {
+          const result = await usersCollection.updateOne(query, {
+            $set: {
+              status: user?.status,
+            },
+          });
+          return res.send(result);
+        } else {
+          return res.send(isExists);
+        }
+      }
+
+      const options = { upsert: true };
       const updateDoc = {
         $set: {
           ...user,
-          timeStamp:Date.now()
+          timeStamp: Date.now(),
         },
       };
       const result = usersCollection.updateOne(query, updateDoc, options);
       res.send(result);
     });
+
+    //get a user info by email
+
+    app.get("/user/:email", async (req, res) => {
+      const email = req.params.email;
+      const result = await usersCollection.findOne({ email });
+      res.send(result);
+    });
+
+    //get all users data from db
+    app.get("/users", async (req, res) => {
+      const result = await usersCollection.find().toArray();
+      res.send(result);
+    });
+
+    //update a user role
+    app.patch("/users/update/:email", async (req, res) => {
+      const email = req.params.email;
+      const user = req.body;
+      const query = { email };
+      const updateDoc = {
+        $set: {
+          ...user,
+          timeStamp: Date.now(),
+        },
+      };
+      console.log(query)
+      const result = await usersCollection.updateOne(query, updateDoc);
+      res.send(result);
+    });
+
     //get single room data from using id
     app.get("/rooms/:id", async (req, res) => {
       const id = req.params.id;
