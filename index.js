@@ -47,8 +47,10 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    const roomsCollection = client.db("stayVista").collection("rooms");
-    const usersCollection = client.db("stayVista").collection("users");
+    const db = client.db("stayVista");
+    const roomsCollection = db.collection("rooms");
+    const usersCollection = db.collection("users");
+    const bookingsCollection = db.collection("bookings");
     //verify admin middleware
 
     const verifyAmin = async (req, res, next) => {
@@ -220,6 +222,70 @@ async function run() {
       const result = await roomsCollection.deleteOne(query);
       res.send(result);
     });
+
+    //save a booking data in db
+    app.post("/booking", verifyToken, async (req, res) => {
+      const bookingData = req.body;
+      //save room booking info
+      const result = await bookingsCollection.insertOne(bookingData);
+
+      //change room availability status
+      // const roomId = bookingData?.roomId;
+      // const query = { _id: new ObjectId(roomId) };
+      // const updateDoc = {
+      //   $set: {
+      //     booked: true,
+      //   },
+      // };
+      // const updateRoom = await roomsCollection.updateOne(query,updateDoc);
+      res.send(result);
+    });
+
+    //update room status
+
+    app.patch("/room/status/:id", async (req, res) => {
+      const id = req.params.id;
+      const status = req.body.status;
+      const query = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          booked: status,
+        },
+      };
+      const result = await roomsCollection.updateOne(query, updateDoc);
+      res.send(result);
+    });
+
+    //my bookings
+
+    app.get("/my-bookings/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { "guest.email": email };
+      const result = await bookingsCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    //delete a booking
+    app.delete("/booking/:id", verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await bookingsCollection.deleteOne(query);
+      res.send(result);
+    });
+
+    //manage bookings
+
+    app.get(
+      "/manage-bookings/:email",
+      verifyToken,
+      verifyHost,
+      async (req, res) => {
+        const email = req.params.email;
+        const query = { "host.email": email };
+        const result = await bookingsCollection.find(query).toArray();
+        res.send(result);
+      }
+    );
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
